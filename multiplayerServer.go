@@ -7,6 +7,8 @@ import (
 	"strings"
 	"container/list"
 	"time"
+	"./game"
+	"./logging"
 )
 
 var waiting *list.List;
@@ -19,22 +21,22 @@ type Person struct {
 
 func main() {
 	waiting = list.New()
-	logIt("SETUP", "Starting...")
+	LogIt("SETUP", "Starting...")
 	
 	addr, err := net.ResolveTCPAddr("ip4", ":4849")
-	errorCheck(err, "Problem resolving TCP address")
+	ErrorCheck(err, "Problem resolving TCP address")
 	
 	listen, err := net.ListenTCP("tcp", addr)
-	errorCheck(err, "TCP listening error")
+	ErrorCheck(err, "TCP listening error")
 	
-	logIt("SETUP", "Ready.")
+	LogIt("SETUP", "Ready.")
 
 	for{
 		connection, err := listen.Accept()
 		if(err != nil){
 			continue
 		}
-		logIt("CONNECTION", "Got new connection")
+		LogIt("CONNECTION", "Got new connection")
 		
 		go newClient(connection)
 		
@@ -44,12 +46,12 @@ func main() {
 }
 
 func newClient(connect net.Conn){
-	logIt("CONNECTION", "Handling new client")
+	LogIt("CONNECTION", "Handling new client")
 	var buffer [512]byte
 
 	_, err := connect.Read(buffer[0:])
 	if err != nil {
-		logError("ERROR", "Error reading from client", err)
+		LogError("ERROR", "Error reading from client", err)
 		connect.Close()
 		return
 	}
@@ -58,12 +60,12 @@ func newClient(connect net.Conn){
 	fmt.Println(commm)
 	//_, err2 := connect.Write([]byte(commm))
 	//if err2 != nil {
-		//logError("ERROR", "Error writing to client", err2)
+		//LogError("ERROR", "Error writing to client", err2)
 		//connect.Close()
 		//return
 	//}
 	//connect.Close()
-	//logIt("CONNECTION", "Closing connection to client")
+	//LogIt("CONNECTION", "Closing connection to client")
 }
 
 
@@ -100,20 +102,6 @@ func newGame(p1 Person, p2 Person) {
 	p2.con.Write([]byte(p1.name))
 	p1.con.Close()
 	p2.con.Close()
-	logIt("CONNECTION", "Closing connection to clients " + p1.name + " and " + p2.name)
+	LogIt("CONNECTION", "Closing connection to clients " + p1.name + " and " + p2.name)
 }
 
-
-func logError(ertype string, message string, err error){
-	fmt.Printf("%s\t%s: %s: %s\n", time.Now().String(), ertype, message, err)
-}
-
-func logIt(ertype string, message string){
-	fmt.Printf("%s\t%s: %s\n", time.Now().String(), ertype, message)
-}
-
-func errorCheck(err error, message string){
-	if(err != nil){
-		logError("ERROR", message, err)
-	}
-}
