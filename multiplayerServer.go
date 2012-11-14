@@ -6,21 +6,25 @@ import (
 	"fmt"
 	"strings"
 	"container/list"
-	"time"
-	"./game"
-	"./logging"
+	//"time"
 )
 
 var waiting *list.List;
+var games map[string] Game
 
 
 type Person struct {
-	name string;
-	con net.Conn;
+	name string
+	con net.Conn
+}
+
+type Game struct {
+	people map[string] Person
 }
 
 func main() {
 	waiting = list.New()
+	games = make(map[string]Game)
 	LogIt("SETUP", "Starting...")
 	
 	addr, err := net.ResolveTCPAddr("ip4", ":4849")
@@ -56,20 +60,11 @@ func newClient(connect net.Conn){
 		return
 	}
 
-	commm := parseCommand(string(buffer[0:]), connect)
-	fmt.Println(commm)
-	//_, err2 := connect.Write([]byte(commm))
-	//if err2 != nil {
-		//LogError("ERROR", "Error writing to client", err2)
-		//connect.Close()
-		//return
-	//}
-	//connect.Close()
-	//LogIt("CONNECTION", "Closing connection to client")
+	_ = parseCommand(string(buffer[0:]), connect)
 }
 
 
-func parseCommand(com string, connection net.Conn) (string){
+func parseCommand(com string, connection net.Conn){
 
 	//var response string;
 	parts := strings.Split(com, ":")
@@ -92,16 +87,33 @@ func parseCommand(com string, connection net.Conn) (string){
 				waiting.Remove(e2)
 				go newGame(p1,p2)
 			}
+		case "move":
+			 _, err := games[parts[2]].people[parts[1]].con.Write([]byte("move:" + parts[1] + ":" + parts[3] + ":" + parts[4]))
+			if ErrorCheck(err, "Could not send new move to client in game " + parts[2]){
+				connection.Write([]byte("fail:Could not message opponent."))
+			}
+			//fmt.Println("%s: MOVED in game %s: %s, %s", parts[1], parts[2], parts[3], parts[4])
+		case "finished":
+			_, err := games[parts[2]].people[parts[1]].con.Write([]byte("finished:" + parts[2] + ":" + parts[3] + ":" + parts[4]))
+			if ErrorCheck(err, "Could not send finished message to client in game " + parts[2]) {
+				connection.Write([]byte("fail:Could not message opponent."))
+			}
+			for _, p := range(games[parts[2]].people){
+				p.con.Close();
+			}
 	}
-
-	return "RESPONSE"
 }
 
 func newGame(p1 Person, p2 Person) {
-	p1.con.Write([]byte(p2.name))
-	p2.con.Write([]byte(p1.name))
-	p1.con.Close()
-	p2.con.Close()
-	LogIt("CONNECTION", "Closing connection to clients " + p1.name + " and " + p2.name)
+	gameName := p1.name + "AND" + p2.name
+	fmt.Println(gameName)
+
+	games[gameName] = Game{make(map[string]Person)}
+	games[gameName].people[p1.name] = p2
+	games[gameName].people[p2.name] = p1
+	
+	p1.con.Write([]byte("partner:" + p2.name + ":" + gameName))
+	p2.con.Write([]byte("partner:" + p1.name + ":" + gameName))
 }
 
+//LogIt("CONNECTION", "Closing connection to clients " + p1.name + " and " + p2.name)
