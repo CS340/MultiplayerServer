@@ -62,7 +62,7 @@ func newClient(connect net.Conn){
 		return
 	}
 
-	_ = parseCommand(string(bytes.TrimRight(buffer[0:]), string(byte(0))), connect)
+	parseCommand(string(bytes.TrimRight(buffer[0:], string(byte(0)))), connect)
 }
 
 
@@ -70,9 +70,13 @@ func parseCommand(com string, connection net.Conn){
 
 	//var response string;
 	parts := strings.Split(com, ":")
+	dataCon, err := mysql.Connect("tcp", "127.0.0.1:3306", "hhss", "highscores", "hhss")
+	ErrorCheck(err, "Could not connect to MySQL database.")
 
 	switch parts[0] {
 		case "new":
+			checker := new(mysql.MySQLResponse)
+
 			checker, err = dataCon.Query("SELECT username FROM users WHERE username='" + parts[2] + "';")
 			if len(checker.FetchRowMap()) > 0{
 				var newPerson Person
@@ -109,6 +113,7 @@ func parseCommand(com string, connection net.Conn){
 				p.con.Close();
 			}
 	}
+	dataCon.Quit();
 }
 
 func newGame(p1 Person, p2 Person) {
