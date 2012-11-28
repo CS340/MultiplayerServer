@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"container/list"
+	"github.com/thoj/go-mysqlpure"
+	"bytes"
 	//"time"
 )
 
@@ -60,7 +62,7 @@ func newClient(connect net.Conn){
 		return
 	}
 
-	_ = parseCommand(string(buffer[0:]), connect)
+	_ = parseCommand(string(bytes.TrimRight(buffer[0:]), string(byte(0))), connect)
 }
 
 
@@ -71,21 +73,26 @@ func parseCommand(com string, connection net.Conn){
 
 	switch parts[0] {
 		case "new":
-			var newPerson Person
-			newPerson.name = parts[1]
-			newPerson.con = connection
+			checker, err = dataCon.Query("SELECT username FROM users WHERE username='" + parts[2] + "';")
+			if len(checker.FetchRowMap()) > 0{
+				var newPerson Person
+				newPerson.name = parts[1]
+				newPerson.con = connection
 
-			waiting.PushFront(newPerson)
+				waiting.PushFront(newPerson)
 
-			if waiting.Len() > 1 {
-				var p1,p2 Person
-				e1 := waiting.Back()
-				p1 = e1.Value.(Person)
-				waiting.Remove(e1)
-				e2 := waiting.Back()
-				p2 = e2.Value.(Person)
-				waiting.Remove(e2)
-				go newGame(p1,p2)
+				if waiting.Len() > 1 {
+					var p1,p2 Person
+					e1 := waiting.Back()
+					p1 = e1.Value.(Person)
+					waiting.Remove(e1)
+					e2 := waiting.Back()
+					p2 = e2.Value.(Person)
+					waiting.Remove(e2)
+					go newGame(p1,p2)
+				}
+			} else {
+				connection.Write([]byte("fail:you don't exist"))
 			}
 		case "move":
 			 _, err := games[parts[2]].people[parts[1]].con.Write([]byte("move:" + parts[1] + ":" + parts[3] + ":" + parts[4]))
