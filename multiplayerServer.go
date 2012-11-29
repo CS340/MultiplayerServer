@@ -63,6 +63,15 @@ func newClient(connect net.Conn){
 	}
 
 	parseCommand(string(bytes.TrimRight(buffer[0:], string(byte(0)))), connect)
+	for {
+		_, err := connect.Read(buffer[0:])
+		if err != nil {
+			LogError("ERROR", "Error reading from client", err)
+			connect.Close()
+			return
+		}
+		parseCommand(string(bytes.TrimRight(buffer[0:], string(byte(0)))), connect)
+	}
 }
 
 
@@ -77,7 +86,7 @@ func parseCommand(com string, connection net.Conn){
 		case "new":
 			checker := new(mysql.MySQLResponse)
 
-			checker, err = dataCon.Query("SELECT username FROM users WHERE username='" + parts[2] + "';")
+			checker, err = dataCon.Query("SELECT username FROM users WHERE username='" + parts[1] + "';")
 			if len(checker.FetchRowMap()) > 0{
 				var newPerson Person
 				newPerson.name = parts[1]
@@ -97,8 +106,11 @@ func parseCommand(com string, connection net.Conn){
 				}
 			} else {
 				connection.Write([]byte("fail:you don't exist"))
+				connection.Close();
 			}
 		case "move":
+			fmt.Println(parts)
+			fmt.Println("move:" + parts[1] + ":" + parts[3] + ":" + parts[4])
 			 _, err := games[parts[2]].people[parts[1]].con.Write([]byte("move:" + parts[1] + ":" + parts[3] + ":" + parts[4]))
 			if ErrorCheck(err, "Could not send new move to client in game " + parts[2]){
 				connection.Write([]byte("fail:Could not message opponent."))
