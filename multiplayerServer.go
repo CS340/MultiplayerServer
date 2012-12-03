@@ -8,7 +8,6 @@ import (
 	"container/list"
 	"github.com/thoj/go-mysqlpure"
 	"bytes"
-	//"time"
 )
 
 var waiting *list.List;
@@ -125,7 +124,6 @@ func parseCommand(com string, connection net.Conn){
 			if ErrorCheck(err, "Could not send new move to client in game " + parts[2]){
 				connection.Write([]byte("fail:Could not message opponent."))
 			}
-			//fmt.Println("%s: MOVED in game %s: %s, %s", parts[1], parts[2], parts[3], parts[4])
 		//Passess along a player winning to another player
 		case "finished":
 			_, err := games[parts[2]].people[parts[1]].con.Write([]byte("finished:" + parts[2] + ":" + parts[3] + ":" + parts[4]))
