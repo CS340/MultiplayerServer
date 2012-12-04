@@ -133,6 +133,14 @@ func parseCommand(com string, connection net.Conn){
 			for _, p := range(games[parts[2]].people){
 				p.con.Close();
 			}
+		case "quit":
+			_, err := games[parts[2]].people[parts[1]].con.Write([]byte("quit:" + parts[2] + ":" + parts[3] + ":" + parts[4]))
+			if ErrorCheck(err, "Could not send quit message to client in game " + parts[2]) {
+				connection.Write([]byte("fail:Could not message opponent."))
+			}
+			for _, p := range(games[parts[2]].people){
+				p.con.Close();
+			}
 	}
 	dataCon.Quit();
 }
